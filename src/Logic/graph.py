@@ -1,4 +1,4 @@
-from Logic.node import Node
+from node import Node
 
 
 class Graph:
@@ -49,10 +49,12 @@ class Graph:
     print_graph()
         Print the graph
     """
+
     def __init__(self, file_name) -> None:
         self.adjacency_matrix = self.create_adjacency_matrix(file_name)
         self.size = len(self.adjacency_matrix)
         self.connected_nodes = []
+        self.pearls = self.get_pearls()
 
     def create_adjacency_matrix(self, file_name: str) -> list[list[Node]]:
         """Create an adjacency matrix from a file
@@ -117,8 +119,8 @@ class Graph:
         """
         start_node = self.adjacency_matrix[s_x][s_y]
         end_node = self.adjacency_matrix[e_x][e_y]
-        print("adding")
-        print(start_node, end_node)
+        # print("adding")
+        # print(start_node, end_node)
 
         # add weight
         end_node.weight += 1
@@ -152,8 +154,8 @@ class Graph:
         """
         start_node = self.adjacency_matrix[s_x][s_y]
         end_node = self.adjacency_matrix[e_x][e_y]
-        print("removing")
-        print(start_node, end_node)
+        # print("removing")
+        # print(start_node, end_node)
         # decrease weight
         end_node.weight -= 1
         start_node.weight -= 1
@@ -169,6 +171,16 @@ class Graph:
             for node in row:
                 if node.list_size() > 0 and node not in self.connected_nodes:
                     self.connected_nodes.append(node)
+
+    def get_pearls(self) -> list[Node]:
+        """get all pearls in the graph
+        """
+        pearls = []
+        for row in self.adjacency_matrix:
+            for node in row:
+                if node.color != None:
+                    pearls.append(node)
+        return pearls
 
     def remove_all_connected_nodes(self):
         """remove all connected nodes from the graph
@@ -198,24 +210,28 @@ class Graph:
 
     class InvalidNodeException(Exception):
         pass
-    
-    def dfs(self, current_node: Node, visited: list[Node], parent_node: Node) -> bool:
-        """do a depth-first search from a node to check if the graph is cyclic
+
+    def dfs(self, current_node: Node, visited: list[Node], parent_node: Node, pearls_included: list[Node]) -> bool:
+        """Do a depth-first search from a node to check if the graph is cyclic
 
         Args:
             current_node (Node): the current node
-            visited (Node): the list of visited nodes
+            visited (list[Node]): the list of visited nodes
             parent_node (Node): the parent node
+            pearls_included (list[Node]): list of pearls included in the visited nodes
 
         Raises:
             Graph.InvalidNodeException: if an invalid node is found
 
         Returns:
-            bool: True if a cycle is found, False otherwise
+            bool: True if a cycle is found and all pearls are included, False otherwise
         """
         print(f"Visiting node: {current_node}", current_node.color)
         visited.append(current_node)
-    
+
+        if current_node.color != None:
+            pearls_included.append(current_node)
+
         # Validate the node based on its color
         if current_node.color == 1:  # White
             if not self.check_valid_white(current_node):
@@ -223,46 +239,52 @@ class Graph:
                 print("Node is not valid, raising InvalidNodeException")
                 raise Graph.InvalidNodeException
             print("Node is valid")
-    
+
         elif current_node.color == 2:  # Black
             if not self.check_valid_black(current_node):
                 print("Node is black, checking validity...")
                 print("Node is not valid, raising InvalidNodeException")
                 raise Graph.InvalidNodeException
             print("Node is valid")
-    
+
         for adjacent_node in current_node.adjacency_list:
             if adjacent_node not in visited:
-                # print(f"Node {adjacent_node} is not visited, visiting it...")
-                self.dfs(adjacent_node, visited, current_node)
+                if self.dfs(adjacent_node, visited, current_node, pearls_included):
+                    return True
             elif adjacent_node != parent_node:
-                print("Found a cycle, returning True")
-                return True
-    
-        # print("Finished visiting all adjacent nodes, returning False")
+                print("Found a cycle")
+                if len(pearls_included) == len(self.pearls):
+                    print("All pearls included, returning True")
+                    return True
+                else:
+                    print("Not all pearls included, returning False")
+                    return False
+
         return False
-    
+
     def is_cyclic(self) -> bool:
-        """check if the graph is cyclic
+        """Check if the graph is cyclic
 
         Returns:
             bool: True if the graph is cyclic, False otherwise
         """
         if not self.all_valid_connections():
             return False
-    
+
         self.get_connected_nodes()
-        
+
         if len(self.connected_nodes) == 0:
             return False
-        
+
         node = self.connected_nodes[0]
         visited = []  # Clear the visited list for each new starting node
+        pearls_included = []
 
         try:
-            if self.dfs(node, visited, None) is True:
-                print("Found a cycle, graph is cyclic")
+            if self.dfs(node, visited, None, pearls_included):
                 return True
+            else:
+                return False
         except Graph.InvalidNodeException:
             print("Invalid node found, stopping DFS")
             return False
@@ -297,7 +319,7 @@ class Graph:
             valid = True
         return valid
 
-    def check_adyacent_black(self, x: int, y:int) -> bool:
+    def check_adyacent_black(self, x: int, y: int) -> bool:
         """return in what positions are the two adyacent nodes that are connected to the node
 
         Args:
@@ -345,7 +367,7 @@ class Graph:
             return True
         return False
 
-    def check_adyacent_white(self, x: int, y:int) -> bool:
+    def check_adyacent_white(self, x: int, y: int) -> bool:
         """return in what positions are the two adyacent nodes that are connected to the node
 
         Args:
@@ -397,18 +419,18 @@ class Graph:
 
         else:
 
-            #print(self.adjacency_matrix[x - 1][y].valid_connections(), self.adjacency_matrix[x + 1][y].valid_connections())
+            # print(self.adjacency_matrix[x - 1][y].valid_connections(), self.adjacency_matrix[x + 1][y].valid_connections())
             if ((self.adjacency_matrix[x - 1][y].valid_connections()
                 and self.adjacency_matrix[x - 1][y] in self.adjacency_matrix[x][y].adjacency_list)
                 and (self.adjacency_matrix[x + 1][y].valid_connections()
-                and self.adjacency_matrix[x + 1][y] in self.adjacency_matrix[x][y].adjacency_list)):
+                     and self.adjacency_matrix[x + 1][y] in self.adjacency_matrix[x][y].adjacency_list)):
                 # print("in col")
                 in_column = True
 
             elif ((self.adjacency_matrix[x][y - 1].valid_connections()
-                and self.adjacency_matrix[x][y - 1] in self.adjacency_matrix[x][y].adjacency_list) 
-                and (self.adjacency_matrix[x][y + 1].valid_connections()
-                and self.adjacency_matrix[x][y + 1] in self.adjacency_matrix[x][y].adjacency_list)):
+                   and self.adjacency_matrix[x][y - 1] in self.adjacency_matrix[x][y].adjacency_list)
+                  and (self.adjacency_matrix[x][y + 1].valid_connections()
+                       and self.adjacency_matrix[x][y + 1] in self.adjacency_matrix[x][y].adjacency_list)):
                 # print("in row")
                 in_row = True
             # print("validaciones")
@@ -423,28 +445,28 @@ class Graph:
             if ((self.adjacency_matrix[x + 1][y - 1].valid_connections()
                 and self.adjacency_matrix[x + 1][y - 1] in self.adjacency_matrix[x][y - 1].adjacency_list)
                 or (self.adjacency_matrix[x + 1][y + 1].valid_connections()
-                and self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x][y + 1].adjacency_list)):                    
+                    and self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x][y + 1].adjacency_list)):
                 return True
         # if is on the last row
         elif last_row:
             if ((self.adjacency_matrix[x - 1][y - 1].valid_connections()
                 and self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x][y - 1].adjacency_list)
                 or (self.adjacency_matrix[x - 1][y + 1].valid_connections()
-                and self.adjacency_matrix[x - 1][y + 1] in self.adjacency_matrix[x][y + 1].adjacency_list)):
+                    and self.adjacency_matrix[x - 1][y + 1] in self.adjacency_matrix[x][y + 1].adjacency_list)):
                 return True
         # if is on the first column
         elif first_col:
             if ((self.adjacency_matrix[x - 1][y + 1].valid_connections()
                 and self.adjacency_matrix[x - 1][y + 1] in self.adjacency_matrix[x - 1][y].adjacency_list)
                 or (self.adjacency_matrix[x + 1][y + 1].valid_connections()
-                and self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x + 1][y].adjacency_list)):
+                    and self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x + 1][y].adjacency_list)):
                 return True
         # if is on the last column
         elif last_col:
             if ((self.adjacency_matrix[x - 1][y - 1].valid_connections()
                 and self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x - 1][y].adjacency_list)
                 or (self.adjacency_matrix[x + 1][y - 1].valid_connections()
-                and self.adjacency_matrix[x + 1][y - 1] in self.adjacency_matrix[x + 1][y].adjacency_list)):
+                    and self.adjacency_matrix[x + 1][y - 1] in self.adjacency_matrix[x + 1][y].adjacency_list)):
                 return True
 
         # check turn
@@ -454,19 +476,19 @@ class Graph:
             # print(
             #     (self.adjacency_matrix[x - 1][y + 1],
             #     self.adjacency_matrix[x - 1][y + 1] in self.adjacency_matrix[x][y].adjacency_list))
-            
-            # x - 1 
+
+            # x - 1
             if self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x - 1][y].adjacency_list:
                 return True
             elif self.adjacency_matrix[x - 1][y + 1] in self.adjacency_matrix[x - 1][y].adjacency_list:
                 return True
-            
+
             # x + 1
             elif self.adjacency_matrix[x + 1][y - 1] in self.adjacency_matrix[x + 1][y].adjacency_list:
                 return True
             elif self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x + 1][y].adjacency_list:
                 return True
-            
+
             # if ((self.adjacency_matrix[x - 1][y - 1].valid_connections()
             #     and self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x][y].adjacency_list)
             #     or (self.adjacency_matrix[x + 1][y - 1].valid_connections()
@@ -477,7 +499,7 @@ class Graph:
             #     and self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x][y].adjacency_list)):
             #     # print("entre aqui3")
             #     return True
-            
+
         elif in_row:
             # y - 1
             if self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x][y - 1].adjacency_list:
