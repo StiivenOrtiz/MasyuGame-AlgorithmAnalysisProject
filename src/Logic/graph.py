@@ -1,5 +1,4 @@
-from node import Node
-
+from Logic.node import Node
 
 class Graph:
     """
@@ -237,14 +236,14 @@ class Graph:
             if not self.check_valid_white(current_node):
                 print("Node is white, checking validity...")
                 print("Node is not valid, raising InvalidNodeException")
-                raise Graph.InvalidNodeException
+                return False
             print("Node is valid")
 
         elif current_node.color == 2:  # Black
             if not self.check_valid_black(current_node):
                 print("Node is black, checking validity...")
                 print("Node is not valid, raising InvalidNodeException")
-                raise Graph.InvalidNodeException
+                return False
             print("Node is valid")
 
         for adjacent_node in current_node.adjacency_list:
@@ -532,3 +531,27 @@ class Graph:
                     print(node, end=" ")
                 print()
             print()
+    
+    def solve(self) -> bool:
+        for x in range(self.size):
+            for y in range(self.size):
+                if self.adjacency_matrix[x][y].color is not None:
+                    if self.backtrack(x, y):
+                        return True
+        return False
+
+    def backtrack(self, x: int, y: int) -> bool:
+        if x == self.size:
+            return True
+
+        nx, ny = (x, y + 1) if y + 1 < self.size else (x + 1, 0)
+
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < self.size and 0 <= ny < self.size:
+                self.add_edge(x, y, nx, ny)
+                if self.is_cyclic():
+                    if self.backtrack(nx, ny):
+                        return True
+                self.remove_edge(x, y, nx, ny)
+        return False

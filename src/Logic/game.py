@@ -27,3 +27,9 @@ class Game_flow:
         Get the size of the graph
         """
         return self.graph.size
+    
+    def solve_masyu(self):
+        """
+        Solve the masyu
+        """
+        self.graph.solve()
