@@ -1,7 +1,7 @@
 # imports
 import pygame
 import sys
-
+import time
 import Util.colors as COLORS
 import GUI.show_game as show_game
 import GUI.show_menu as show_menu
@@ -67,12 +67,15 @@ def main():
             new_filename = menu.filename
             is_new_game = menu.new_game
             
-            
             if new_filename != filename and is_new_game:
                 filename = new_filename
                 game = show_game.Game(SCREEN_WIDTH, SCREEN_HEIGHT, filename)
                 
         elif current_state == "game":
+            game.draw(screen, events)
+            
+        elif current_state == "ai_game":
+            game.ai_game = True
             game.draw(screen, events)
 
         # Update the screen

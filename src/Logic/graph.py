@@ -1,5 +1,6 @@
 from Logic.node import Node
 
+
 class Graph:
     """
     Graph class to represent a graph
@@ -236,14 +237,14 @@ class Graph:
             if not self.check_valid_white(current_node):
                 print("Node is white, checking validity...")
                 print("Node is not valid, raising InvalidNodeException")
-                return False
+                raise Graph.InvalidNodeException
             print("Node is valid")
 
         elif current_node.color == 2:  # Black
             if not self.check_valid_black(current_node):
                 print("Node is black, checking validity...")
                 print("Node is not valid, raising InvalidNodeException")
-                return False
+                raise Graph.InvalidNodeException
             print("Node is valid")
 
         for adjacent_node in current_node.adjacency_list:
