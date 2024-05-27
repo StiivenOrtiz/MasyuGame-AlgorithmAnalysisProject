@@ -72,8 +72,8 @@ def main():
                 game = show_game.Game(SCREEN_WIDTH, SCREEN_HEIGHT, filename)
                 
         elif current_state == "game":
+            game.ai_game = False
             game.draw(screen, events)
-            
         elif current_state == "ai_game":
             game.ai_game = True
             game.draw(screen, events)
