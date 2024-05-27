@@ -134,6 +134,10 @@ class Game:
     def solve_masyu(self, screen):
         if not self.backtrack(screen):
             print("No solution found")
+            return False
+        else:
+            print("Solution found")
+            return True
             
     def backtrack(self, screen):
         if self.game.check_solved():
@@ -142,6 +146,7 @@ class Game:
         if self.game.graph.first_random_move():
             print("First random move")
             possible_moves = self.game.graph.get_first_random_move()
+            
         else:
             print("Possible moves")
             possible_moves = self.game.graph.get_possible_moves()
@@ -158,7 +163,7 @@ class Game:
             self.draw_all_game(screen)
             pygame.display.flip()  # Ensure the screen updates
             pygame.time.delay(10)  # Add a short delay to visualize moves
-
+            return True
         return False
 
     def make_ai_move(self, s_x, s_y, e_x, e_y):
@@ -167,8 +172,6 @@ class Game:
         self.drawn_lines.append((e_x, e_y))
         self.ai_move_stack.append((s_x, s_y, e_x, e_y))  # Push move onto stack
         print("AI move made")
-        
-        # self.game_over = True  # Set the flag to indicate game over
 
     def undo_ai_move(self):
         s_x, s_y, e_x, e_y = self.ai_move_stack.pop()  # Pop move from stack

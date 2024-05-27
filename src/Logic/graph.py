@@ -1,4 +1,3 @@
-import random
 from Logic.node import Node
 
 
@@ -300,9 +299,9 @@ class Graph:
             bool: True if the node is valid, False otherwise
         """
         valid = False
-        if self.check_adyacent_black(node.x, node.y):
-            valid = True
-
+        if node.color == 2:
+            if self.check_adyacent_black(node.x, node.y):
+                valid = True
         return valid
 
     def check_valid_white(self, node: Node) -> bool:
@@ -315,9 +314,9 @@ class Graph:
             bool: True if the node is valid, False otherwise
         """
         valid = False
-        # print("fasfda", self.adjacency_matrix[x][y].weight)
-        if self.check_adyacent_white(node.x, node.y):
-            valid = True
+        if node.color == 1:
+            if self.check_adyacent_white(node.x, node.y):
+                valid = True
         return valid
 
     def check_adyacent_black(self, x: int, y: int) -> bool:
@@ -363,7 +362,7 @@ class Graph:
                     and not 1 in pos_adyacent):
                 pos_adyacent.append(4)
 
-        print(len(pos_adyacent))
+        # print(len(pos_adyacent))
         if len(pos_adyacent) == 2:
             return True
         return False
@@ -389,6 +388,8 @@ class Graph:
         # if is on the first row
         # check left and right
         if (x == 0):
+            # print("No se que esta pasando")
+            # print(x, y, self.adjacency_matrix[x][y - 1].valid_connections(), self.adjacency_matrix[x][y + 1].valid_connections())
             # print("auida1")
             if (self.adjacency_matrix[x][y - 1].valid_connections()
                     and self.adjacency_matrix[x][y + 1].valid_connections()):
@@ -469,15 +470,8 @@ class Graph:
                 or (self.adjacency_matrix[x + 1][y - 1].valid_connections()
                     and self.adjacency_matrix[x + 1][y - 1] in self.adjacency_matrix[x + 1][y].adjacency_list)):
                 return True
-
         # check turn
-        elif in_column:
-            # check connection turn to a column or row
-            # check left
-            # print(
-            #     (self.adjacency_matrix[x - 1][y + 1],
-            #     self.adjacency_matrix[x - 1][y + 1] in self.adjacency_matrix[x][y].adjacency_list))
-
+        elif in_column:   
             # x - 1
             if self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x - 1][y].adjacency_list:
                 return True
@@ -489,18 +483,6 @@ class Graph:
                 return True
             elif self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x + 1][y].adjacency_list:
                 return True
-
-            # if ((self.adjacency_matrix[x - 1][y - 1].valid_connections()
-            #     and self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x][y].adjacency_list)
-            #     or (self.adjacency_matrix[x + 1][y - 1].valid_connections()
-            #     and self.adjacency_matrix[x + 1][y - 1] in self.adjacency_matrix[x][y].adjacency_list)
-            #     or (self.adjacency_matrix[x - 1][y + 1].valid_connections()
-            #     and self.adjacency_matrix[x - 1][y + 1] in self.adjacency_matrix[x][y].adjacency_list)
-            #     or (self.adjacency_matrix[x + 1][y + 1].valid_connections()
-            #     and self.adjacency_matrix[x + 1][y + 1] in self.adjacency_matrix[x][y].adjacency_list)):
-            #     # print("entre aqui3")
-            #     return True
-
         elif in_row:
             # y - 1
             if self.adjacency_matrix[x - 1][y - 1] in self.adjacency_matrix[x][y - 1].adjacency_list:
@@ -538,7 +520,7 @@ class Graph:
         moves = []
         rows = self.size
         cols = self.size
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # right, left, down, up
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
     
         for i in range(rows):
             for j in range(cols):
@@ -546,10 +528,28 @@ class Graph:
                     for dx, dy in directions:
                         new_x, new_y = i + dx, j + dy
                         if 0 <= new_x < rows and 0 <= new_y < cols:
-                            moves.append((i, j, new_x, new_y))
-    
+                            moves.append((i, j, new_x, new_y))  
+        moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
         return moves
     
+    def move_heuristic(self, move):
+        s_x, s_y, e_x, e_y = move
+        start_node = self.adjacency_matrix[s_x][s_y]
+        end_node = self.adjacency_matrix[e_x][e_y]
+        score = 0
+
+        if start_node.color is not None or end_node.color is not None:
+            score += 10
+        if start_node.weight == 1 or end_node.weight == 1:
+            score += 5
+        if self.check_valid_black(start_node) or self.check_valid_black(end_node):
+            score += 3
+        if self.check_valid_white(start_node) or self.check_valid_white(end_node):
+            score += 3
+            
+        print(s_x, s_y, e_x, e_y, score)
+        return score
+        
     def first_possible_moves_p(self, pearl):
         moves = []
         rows = self.size
@@ -562,7 +562,6 @@ class Graph:
                 new_x, new_y = i + dx, j + dy
                 if 0 <= new_x < rows and 0 <= new_y < cols:
                     moves.append((i, j, new_x, new_y))
-    
         return moves
     
     def first_random_move(self):
@@ -580,4 +579,5 @@ class Graph:
         if not moves:
             return None
         # Otherwise, return a random move
+        moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
         return moves
