@@ -516,68 +516,207 @@ class Graph:
                 print()
             print()
             
-    def get_possible_moves(self):
-        moves = []
-        rows = self.size
-        cols = self.size
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-    
-        for i in range(rows):
-            for j in range(cols):
-                if self.adjacency_matrix[i][j].weight == 1:
-                    for dx, dy in directions:
-                        new_x, new_y = i + dx, j + dy
-                        if 0 <= new_x < rows and 0 <= new_y < cols:
-                            moves.append((i, j, new_x, new_y))  
-        moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
-        return moves
-    
-    def move_heuristic(self, move):
-        s_x, s_y, e_x, e_y = move
-        start_node = self.adjacency_matrix[s_x][s_y]
-        end_node = self.adjacency_matrix[e_x][e_y]
-        score = 0
+    def clean_list(self, return_list: list[tuple]) -> None:
+        """Remove connections to the white pearls that already have two connections
 
-        if start_node.color is not None or end_node.color is not None:
-            score += 10
-        if start_node.weight == 1 or end_node.weight == 1:
-            score += 5
-        if self.check_valid_black(start_node) or self.check_valid_black(end_node):
-            score += 3
-        if self.check_valid_white(start_node) or self.check_valid_white(end_node):
-            score += 3
+        Args:
+            return_list (list[tuple]): The list of white pearls
+        """
+        
+        filtered_list = []
+        
+        # Iteramos sobre la lista en pasos de 2
+        for i in range(0, len(return_list) - 1, 2):
+            s_x, s_y = return_list[i][0] - 1, return_list[i][1] - 1
+            e_x, e_y = return_list[i + 1][0] - 1, return_list[i + 1][1] - 1
             
-        print(s_x, s_y, e_x, e_y, score)
-        return score
+            start_node = self.adjacency_matrix[s_x][s_y]
+            end_node = self.adjacency_matrix[e_x][e_y]
+            
+            # Si las conexiones no están duplicadas, añadimos ambos puntos a la lista filtrada
+            if end_node not in start_node.adjacency_list and start_node not in end_node.adjacency_list:
+                filtered_list.append(return_list[i])
+                filtered_list.append(return_list[i + 1])
         
-    def first_possible_moves_p(self, pearl):
+        return filtered_list
+            
+    def get_classify_pearls(self):
+        white_pearls = []
+        black_pearls = []
+        for pearl in self.pearls:
+            if pearl.color == 1:
+                white_pearls.append(pearl)
+            elif pearl.color == 2:
+                black_pearls.append(pearl)
+        return black_pearls, white_pearls
+    
+    def get_possible_black_pearl_moves(self, pearl):
         moves = []
-        rows = self.size
-        cols = self.size
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # right, left, down, up
-    
-        i, j = pearl.x, pearl.y
-        if self.adjacency_matrix[i][j].weight == 0:
-            for dx, dy in directions:
-                new_x, new_y = i + dx, j + dy
-                if 0 <= new_x < rows and 0 <= new_y < cols:
-                    moves.append((i, j, new_x, new_y))
+        row, col = pearl.x, pearl.y
+        size = self.size
+
+        # Direcciones para movimientos posibles
+        directions = [
+            ((0, -2), (0, -1), (1, 0), (2, 0)), # derecha y abajo
+            ((0, -2), (0, -1), (-1, 0), (-2, 0)), # derecha y arriba
+            ((0, 2), (0, 1), (1, 0), (2, 0)), # izquierda y abajo
+            ((0, 2), (0, 1), (-1, 0), (-2, 0)), # izquierda y arriba
+        ]
+
+        for direction in directions:
+            move = [(row + dr, col + dc) for dr, dc in direction]
+            
+            if all(0 <= r < size and 0 <= c < size for r, c in move):
+                black_adjacent = False
+                for i in range(len(move)):
+                    if self.adjacency_matrix[move[i][0]][move[i][1]].color == 2 and \
+                        ((row - 1 == move[i][0] and col == move[i][1]) or \
+                         (row + 1 == move[i][0] and col == move[i][1]) or \
+                         (row == move[i][0] and col - 1 == move[i][1]) or \
+                         (row == move[i][0] and col + 1 == move[i][1])):
+                        black_adjacent = True
+                        break
+                if black_adjacent == False:
+                    moves.append(move)
+
         return moves
     
-    def first_random_move(self):
-        # Check if any AI moves have been done
-        if all(all(cell.weight == 0 for cell in row) for row in self.adjacency_matrix):
-            return True
-        else:
-            # If an AI move has been done, return None
-            return False
+    def get_possible_white_pearl_moves(self, pearl):
+        moves = []
+        row, col = pearl.x, pearl.y
+        size = self.size
         
-    def get_first_random_move(self):
-        # Get the possible moves for this pearl
-        moves = self.first_possible_moves_p(self.pearls[0])
-        # If there are no possible moves, return None
-        if not moves:
-            return None
-        # Otherwise, return a random move
-        moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
+        # Direcciones para movimientos posibles
+        directions = [
+            ((1, 0), (-1, 0), (-1, 1)), # Arriba y derecha
+            ((1, 0), (-1, 0), (-1, -1)), # Arriba y izquierda
+            ((-1, 0), (1, 0), (1, 1)), # Abajo y derecha
+            ((-1, 0), (1, 0), (1, -1)), # Abajo y izquierda
+            ((0, -1), (0, 1), (1, 1)), # Derecha y abajo
+            ((0, -1), (0, 1), (-1, 1)), # Derecha y arriba
+            ((0, 1), (0, -1), (1, -1)), # Izquierda y abajo
+            ((0, 1), (0, -1), (-1, -1)), # Izquierda y arriba
+        ]
+
+        for direction in directions:
+            move = [(row + dr, col + dc) for dr, dc in direction]
+            if all(0 <= r < size and 0 <= c < size for r, c in move):
+                moves.append(move)
+
         return moves
+    
+    def solve_mayus_game(self):
+        black_pearls, white_pearls = self.get_classify_pearls()
+        
+        print("\n")
+        
+        for black_pearl in black_pearls:
+            print(self.get_possible_black_pearl_moves(black_pearl))
+        
+        for white_pearl in white_pearls:
+            print(self.get_possible_white_pearl_moves(white_pearl))
+            
+        print("\n")
+        
+        first_black_pearl = black_pearls[0]
+        first_white_pearl = white_pearls[0]
+        
+        black_moves = self.get_possible_black_pearl_moves(first_black_pearl)
+        white_moves = self.get_possible_white_pearl_moves(first_white_pearl)
+        
+        first_black_moves = black_moves[0]
+        first_white_moves = white_moves[0]
+        
+        white_return = []
+        for i in range(len(first_white_moves)):
+            white_return.append((first_white_moves[i][0] + 1, first_white_moves[i][1] + 1))
+            
+        black_return = []
+        for i in range(len(first_black_moves)):
+            black_return.append((first_black_moves[i][0] + 1, first_black_moves[i][1] + 1))
+        
+        return (first_black_pearl.x + 1, first_black_pearl.y + 1), black_return, (first_white_pearl.x + 1, first_white_pearl.y + 1), white_return
+        
+        
+        # first_black_pearl = white_pearls[0]
+        # print(self.get_possible_black_pearl_moves(first_black_pearl))
+        
+        # for i in range(len(black_pearls)):
+        #     print("Pearl [",i,"]: ", black_pearls[i].x, black_pearls[i].y)
+            
+        
+        # # Sumar 1 a todas las posiciones
+        # # lista_retorno = self.get_possible_black_pearl_moves(first_black_pearl)[0]
+        # lista_retorno = self.get_possible_white_pearl_moves(first_black_pearl)[0]
+        # for i in range(len(lista_retorno)):
+        #     lista_retorno[i] = (lista_retorno[i][0] + 1, lista_retorno[i][1] + 1)
+        
+        # return lista_retorno, first_black_pearl.x + 1, first_black_pearl.y + 1
+
+        
+
+    # def get_possible_moves(self):
+    #     moves = []
+    #     rows = self.size
+    #     cols = self.size
+    #     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+    
+    #     for i in range(rows):
+    #         for j in range(cols):
+    #             if self.adjacency_matrix[i][j].weight == 1:
+    #                 for dx, dy in directions:
+    #                     new_x, new_y = i + dx, j + dy
+    #                     if 0 <= new_x < rows and 0 <= new_y < cols:
+    #                         moves.append((i, j, new_x, new_y))  
+    #     moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
+    #     return moves
+    
+    # def move_heuristic(self, move):
+    #     s_x, s_y, e_x, e_y = move
+    #     start_node = self.adjacency_matrix[s_x][s_y]
+    #     end_node = self.adjacency_matrix[e_x][e_y]
+    #     score = 0
+
+    #     if start_node.color is not None or end_node.color is not None:
+    #         score += 10
+    #     if start_node.weight == 1 or end_node.weight == 1:
+    #         score += 5
+    #     if self.check_valid_black(start_node) or self.check_valid_black(end_node):
+    #         score += 3
+    #     if self.check_valid_white(start_node) or self.check_valid_white(end_node):
+    #         score += 3
+            
+    #     print(s_x, s_y, e_x, e_y, score)
+    #     return score
+        
+    # def first_possible_moves_p(self, pearl):
+    #     moves = []
+    #     rows = self.size
+    #     cols = self.size
+    #     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # right, left, down, up
+    
+    #     i, j = pearl.x, pearl.y
+    #     if self.adjacency_matrix[i][j].weight == 0:
+    #         for dx, dy in directions:
+    #             new_x, new_y = i + dx, j + dy
+    #             if 0 <= new_x < rows and 0 <= new_y < cols:
+    #                 moves.append((i, j, new_x, new_y))
+    #     return moves
+    
+    # def first_random_move(self):
+    #     # Check if any AI moves have been done
+    #     if all(all(cell.weight == 0 for cell in row) for row in self.adjacency_matrix):
+    #         return True
+    #     else:
+    #         # If an AI move has been done, return None
+    #         return False
+        
+    # def get_first_random_move(self):
+    #     # Get the possible moves for this pearl
+    #     moves = self.first_possible_moves_p(self.pearls[0])
+    #     # If there are no possible moves, return None
+    #     if not moves:
+    #         return None
+    #     # Otherwise, return a random move
+    #     moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
+    #     return moves
