@@ -12,8 +12,7 @@ class Game:
         self.drawn_lines = []
         self.filename = filename
         self.ai_game = False
-        self.ai_move_made = False  # Flag to indicate if AI move has been made
-        self.ai_move_undone = False  # Flag to indicate if AI move has been undone
+        self.ai_move_stack = []
         self.game_over = False  # Flag to indicate if the game is over
         
         # Create the graph
@@ -85,7 +84,6 @@ class Game:
                 if self.BUTTON_THEME_X <= mouse_x <= self.BUTTON_THEME_X + self.BUTTON_THEME_SIZE and \
                         self.BUTTON_THEME_Y <= mouse_y <= self.BUTTON_THEME_Y + self.BUTTON_THEME_SIZE:
                     self.colors.change_dark_mode()
-                    self.game.solve_masyu()
                 # Check if the mouse is over the check win button
                 elif self.BUTTON_WIN_X <= mouse_x <= self.BUTTON_WIN_X + self.BUTTON_WIN_WIDTH and \
                         self.BUTTON_WIN_Y <= mouse_y <= self.BUTTON_WIN_Y + self.BUTTON_WIN_HEIGHT:
@@ -114,18 +112,12 @@ class Game:
         else:
             
             self.draw_all_game(screen)
-
-            if not self.ai_move_made and not self.game_over:
-                self.make_ai_move()
-                self.draw_all_game(screen)
-                self.ai_move_made = True  # Set the flag to indicate AI has made a move
-                self.ai_move_undone = False  # Ensure the undo flag is reset
-
-            elif self.ai_move_made and not self.ai_move_undone and not self.game_over:
-                self.undo_ai_move()
-                self.draw_all_game(screen)
-                self.ai_move_undone = True  # Set the flag to indicate AI move has been undone
-                self.ai_move_made = False  # Reset the flag for the next move
+            
+            # Solve the game
+            if not self.game_over:
+                if self.solve_masyu(screen):
+                    self.game_over = True
+                    print("Game Over")
                 
         # Draw the check win button
         pygame.draw.rect(screen, self.colors.WHITE, (self.BUTTON_WIN_X,
@@ -135,34 +127,51 @@ class Game:
         screen.blit(text, (self.BUTTON_WIN_X + 10, self.BUTTON_WIN_Y + 10))
 
     def check_win(self):
-        print("///////////////////////////////////////////////////")
-        print("Button clicked!")
         self.has_won = self.game.check_solved()
         self.button_clicked = True
         print(self.has_won)
-        
-    def make_ai_move(self):
-        time.sleep(0.2)
-        s_x, s_y = (1, 1)  # Start coordinates (1-based index)
-        e_x, e_y = (1, 2)  # End coordinates (1-based index)
-        self.game.make_move(s_x - 1, s_y - 1, e_x - 1, e_y - 1)  # Convert to 0-based index
-        self.drawn_lines.append((s_x, s_y))
-        self.drawn_lines.append((e_x, e_y))
-        
-        s_x, s_y = (1, 2)  # Start coordinates (1-based index)
-        e_x, e_y = (2, 3)  # End coordinates (1-based index)
-        # Convert to 0-based index
+    
+    def solve_masyu(self, screen):
+        if not self.backtrack(screen):
+            print("No solution found")
+            
+    def backtrack(self, screen):
+        if self.game.check_solved():
+            return True
+
+        if self.game.graph.first_random_move():
+            print("First random move")
+            possible_moves = self.game.graph.get_first_random_move()
+        else:
+            print("Possible moves")
+            possible_moves = self.game.graph.get_possible_moves()
+
+        for move in possible_moves:
+            s_x, s_y, e_x, e_y = move
+            self.make_ai_move(s_x + 1, s_y + 1, e_x + 1, e_y + 1)
+            self.draw_all_game(screen)
+            pygame.display.flip()  # Ensure the screen updates
+            pygame.time.delay(10)  # Add a short delay to visualize moves
+            if self.backtrack(screen):
+                return True
+            self.undo_ai_move()
+            self.draw_all_game(screen)
+            pygame.display.flip()  # Ensure the screen updates
+            pygame.time.delay(10)  # Add a short delay to visualize moves
+
+        return False
+
+    def make_ai_move(self, s_x, s_y, e_x, e_y):
         self.game.make_move(s_x - 1, s_y - 1, e_x - 1, e_y - 1)
         self.drawn_lines.append((s_x, s_y))
         self.drawn_lines.append((e_x, e_y))
+        self.ai_move_stack.append((s_x, s_y, e_x, e_y))  # Push move onto stack
         print("AI move made")
         
-        self.game_over = True  # Set the flag to indicate game over
+        # self.game_over = True  # Set the flag to indicate game over
 
     def undo_ai_move(self):
-        time.sleep(0.2)
-        s_x, s_y = (1, 2)
-        e_x, e_y = (2, 3)
+        s_x, s_y, e_x, e_y = self.ai_move_stack.pop()  # Pop move from stack
         self.game.undo_move(s_x - 1, s_y - 1, e_x - 1, e_y - 1)
         self.drawn_lines = self.mc.delete_lines_like((s_x, s_y), (e_x, e_y), self.drawn_lines)
         print("AI move undone")

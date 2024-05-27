@@ -1,3 +1,4 @@
+import random
 from Logic.node import Node
 
 
@@ -532,27 +533,51 @@ class Graph:
                     print(node, end=" ")
                 print()
             print()
+            
+    def get_possible_moves(self):
+        moves = []
+        rows = self.size
+        cols = self.size
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # right, left, down, up
     
-    def solve(self) -> bool:
-        for x in range(self.size):
-            for y in range(self.size):
-                if self.adjacency_matrix[x][y].color is not None:
-                    if self.backtrack(x, y):
-                        return True
-        return False
-
-    def backtrack(self, x: int, y: int) -> bool:
-        if x == self.size:
+        for i in range(rows):
+            for j in range(cols):
+                if self.adjacency_matrix[i][j].weight == 1:
+                    for dx, dy in directions:
+                        new_x, new_y = i + dx, j + dy
+                        if 0 <= new_x < rows and 0 <= new_y < cols:
+                            moves.append((i, j, new_x, new_y))
+    
+        return moves
+    
+    def first_possible_moves_p(self, pearl):
+        moves = []
+        rows = self.size
+        cols = self.size
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # right, left, down, up
+    
+        i, j = pearl.x, pearl.y
+        if self.adjacency_matrix[i][j].weight == 0:
+            for dx, dy in directions:
+                new_x, new_y = i + dx, j + dy
+                if 0 <= new_x < rows and 0 <= new_y < cols:
+                    moves.append((i, j, new_x, new_y))
+    
+        return moves
+    
+    def first_random_move(self):
+        # Check if any AI moves have been done
+        if all(all(cell.weight == 0 for cell in row) for row in self.adjacency_matrix):
             return True
-
-        nx, ny = (x, y + 1) if y + 1 < self.size else (x + 1, 0)
-
-        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < self.size and 0 <= ny < self.size:
-                self.add_edge(x, y, nx, ny)
-                if self.is_cyclic():
-                    if self.backtrack(nx, ny):
-                        return True
-                self.remove_edge(x, y, nx, ny)
-        return False
+        else:
+            # If an AI move has been done, return None
+            return False
+        
+    def get_first_random_move(self):
+        # Get the possible moves for this pearl
+        moves = self.first_possible_moves_p(self.pearls[0])
+        # If there are no possible moves, return None
+        if not moves:
+            return None
+        # Otherwise, return a random move
+        return moves
