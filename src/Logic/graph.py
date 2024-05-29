@@ -1,3 +1,4 @@
+from time import sleep
 from Logic.node import Node
 import sys
 sys.setrecursionlimit(10**6)
@@ -196,7 +197,7 @@ class Graph:
         """
         self.remove_all_connected_nodes()
         self.get_connected_nodes()
-        self.print_connected_nodes()
+        # self.print_connected_nodes()
         return self.is_cyclic()
 
     class InvalidNodeException(Exception):
@@ -624,10 +625,10 @@ class Graph:
         for pearl in white_pearls:
             moves[(pearl.x, pearl.y)] = self.get_possible_white_pearl_moves(pearl)
             
-        return self.solve(moves, 1)
+        return self.solve(moves, 1, None)
         
             
-    def solve(self, moves, state):
+    def solve(self, moves, state, last_move):
         if len(moves) > 0:
             # Ordenar el diccionario de movimientos por la cantidad de movimientos posibles
             moves = dict(sorted(moves.items(), key=lambda item: len(item[1])))
@@ -661,9 +662,12 @@ class Graph:
                     for i in range(0, len(plays_list) - 1):
                         print("Adding edge", plays_list[i][0], plays_list[i][1], plays_list[i + 1][0], plays_list[i + 1][1])
                         self.add_edge(plays_list[i][0], plays_list[i][1], plays_list[i + 1][0], plays_list[i + 1][1])
+                        
+                    if self.check_win():
+                        return self.return_draw_lines()
 
                     new_moves = self.validate_new_moves(moves)
-                    result = self.solve(new_moves, state + 1)
+                    result = self.solve(new_moves, state + 1, None)
 
                     if result is not None:
                         return result
@@ -677,42 +681,73 @@ class Graph:
             print("Checking win ", self.check_win())
             if self.check_win():
                 return self.return_draw_lines()
-
+            
+            possible_connections = []
+            
+            if last_move is not None:
+                if self.adjacency_matrix[last_move[0]][last_move[1]].weight == 1:
+                    print("No more moves")
+                    possible_connections = self.get_possible_connections(last_move)
+                    if possible_connections is None:
+                        print("No more free cells")
+                        return None
+                    else:
+                        for i in range(len(possible_connections)):
+                            print(f"\nMake play: {last_move} -> {possible_connections[i]}")
+                            self.add_edge(last_move[0], last_move[1], possible_connections[i][0], possible_connections[i][1])
+                            
+                            if self.check_win():
+                                return self.return_draw_lines()
+                            
+                            result = self.solve(moves, state + 1, (possible_connections[i][0], possible_connections[i][1]))
+                            
+                            if result is not None:
+                                return result
+                            
+                            self.remove_edge(last_move[0], last_move[1], possible_connections[i][0], possible_connections[i][1])
+                            
+                        return None
+            
             free_cells = self.get_free_cells()
 
-            if len(free_cells) == 0:
+            if free_cells == None:
+                print("No more free cells")
                 return None
 
-            for cell in free_cells:
-                possible_connections = self.get_possible_connections(cell)
-                for connection in possible_connections:
-
-                    self.add_edge(cell[0], cell[1], connection[0], connection[1])
-                    result = self.solve({}, state + 1)
-
+            for keys in free_cells:
+                for cell in free_cells[keys]:
+                    print(f"\nMake play: {keys} -> {cell}")
+                    self.add_edge(keys[0], keys[1], cell[0], cell[1])
+                    
+                    if self.check_win():
+                        return self.return_draw_lines()
+                    
+                    result = self.solve(moves, state + 1, (cell[0], cell[1]))
+                    
                     if result is not None:
                         return result
-
-                    self.remove_edge(cell[0], cell[1], connection[0], connection[1])
-
-        
+                    
+                    self.remove_edge(keys[0], keys[1], cell[0], cell[1])
+        return None
 
         
     def get_free_cells(self):
-        # obtener las celdas que tengan 0 y 1 conexiones
-        weight = []
-        free_cells = []
+        # obtener las celdas quetengan 0 y 1 conexiones
+        result = {}
         for row in self.adjacency_matrix:
             for cell in row:
-                if cell.weight < 2:
-                    free_cells.append((cell.x, cell.y))
-                    weight.append(cell.weight)
-                    
-        #ordenar por peso (mayor a menor)
-        free_cells = [x for _, x in sorted(zip(weight, free_cells), key=lambda pair: pair[0], reverse=True)]
-                    
-        return free_cells
-    
+                if cell.weight == 1:
+                    possible_connections = self.get_possible_connections((cell.x, cell.y))
+                    if possible_connections is not None:
+                        result[(cell.x, cell.y)] = possible_connections
+                    else:
+                        return None
+        
+        # ordenar por cantidad de posibles movimientos de menor a mayor
+        result = dict(sorted(result.items(), key=lambda item: len(item[1])))
+        return result
+
+
     def get_possible_connections(self, node_):
         adj = [
             (-1, 0),  # up
@@ -721,7 +756,16 @@ class Graph:
             (1, 0),   # down
         ]
         
-        return self.get_coords_nodes(node_, adj)
+        possible = self.get_coords_nodes(node_, adj)
+        for i in range(len(possible) - 1, -1, -1):
+            if self.adjacency_matrix[possible[i][0]][possible[i][1]].weight >= 2:
+                possible.pop(i)
+        
+        # Si está vacio se retorna None
+        if len(possible) == 0:
+            return None
+        
+        return possible
                     
     def return_draw_lines(self):
         self.remove_all_connected_nodes()
