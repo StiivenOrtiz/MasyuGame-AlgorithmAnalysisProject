@@ -99,7 +99,10 @@ class Menu:
                 self.current_state = "game"
         elif ia_button.collidepoint((mouse_x, mouse_y)) and click:
             self.new_game = True
-            self.filename = select_file()
+            if actual_filename == "":
+                self.filename = select_file()
+            else:
+                self.filename = actual_filename
             if self.filename is not None:
                 self.current_state = "ai_game"
         elif quit_button.collidepoint((mouse_x, mouse_y)) and click:

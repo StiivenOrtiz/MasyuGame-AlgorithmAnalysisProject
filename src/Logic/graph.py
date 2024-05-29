@@ -1,4 +1,6 @@
 from Logic.node import Node
+import sys
+sys.setrecursionlimit(10**6)
 
 
 class Graph:
@@ -55,7 +57,6 @@ class Graph:
         self.size = len(self.adjacency_matrix)
         self.connected_nodes = []
         self.pearls = self.get_pearls()
-        self.melachupa = []
 
     def create_adjacency_matrix(self, file_name: str) -> list[list[Node]]:
         """Create an adjacency matrix from a file
@@ -511,12 +512,6 @@ class Graph:
                 print(adjacent, end=" ")
             print()
         print()
-        
-        #Imprimir el tablero con las jugadas
-        for x in range(self.size):
-            for y in range(self.size):
-                print(f"{self.adjacency_matrix[x][y].weight} ", end="\t")
-            print()
 
     def print_graph(self):
         print("----SEE GRAPH----")
@@ -629,30 +624,122 @@ class Graph:
         for pearl in white_pearls:
             moves[(pearl.x, pearl.y)] = self.get_possible_white_pearl_moves(pearl)
             
-        self.solve(moves, 1)
-            
-        return self.melachupa
+        return self.solve(moves, 1)
         
             
-    # def solve(self, moves, gameeee):
+    def solve(self, moves, state):
+        if len(moves) > 0:
+            # Ordenar el diccionario de movimientos por la cantidad de movimientos posibles
+            moves = dict(sorted(moves.items(), key=lambda item: len(item[1])))
+            plays = {}
+            # Si el primer elemento del diccionario tiene 1 movimiento posible, lo seleccionamos
+            if len(moves[list(moves.keys())[0]]) == 1:
+                for key in moves:
+                    if len(moves[key]) == 1:
+                        plays[key] = moves[key]
+                    else:
+                        break
 
+                for key in plays:
+                    del moves[key]
+            else:
+                key = list(moves.keys())[0]
+                plays[key] = moves[key]
+                del moves[key]
+
+            for key in plays:
+                for i in range(len(plays[key])):
+                    move = plays[key][i]
+                    plays_list = []
+                    if self.adjacency_matrix[key[0]][key[1]].color == 1:
+                        plays_list = [move[0], key, move[1], move[2]]
+                    elif self.adjacency_matrix[key[0]][key[1]].color == 2:
+                        plays_list = [move[0], move[1], key, move[2], move[3]]
+
+                    print(f"\nMake play: {plays_list}")
+
+                    for i in range(0, len(plays_list) - 1):
+                        print("Adding edge", plays_list[i][0], plays_list[i][1], plays_list[i + 1][0], plays_list[i + 1][1])
+                        self.add_edge(plays_list[i][0], plays_list[i][1], plays_list[i + 1][0], plays_list[i + 1][1])
+
+                    new_moves = self.validate_new_moves(moves)
+                    result = self.solve(new_moves, state + 1)
+
+                    if result is not None:
+                        return result
+
+                    for i in range(0, len(plays_list) - 1):
+                        print("Removing edge", plays_list[i][0], plays_list[i][1], plays_list[i + 1][0], plays_list[i + 1][1])
+                        self.remove_edge(plays_list[i][0], plays_list[i][1], plays_list[i + 1][0], plays_list[i + 1][1])
+        else:
+            print("No more moves")
+
+            print("Checking win ", self.check_win())
+            if self.check_win():
+                return self.return_draw_lines()
+
+            free_cells = self.get_free_cells()
+
+            if len(free_cells) == 0:
+                return None
+
+            for cell in free_cells:
+                possible_connections = self.get_possible_connections(cell)
+                for connection in possible_connections:
+
+                    self.add_edge(cell[0], cell[1], connection[0], connection[1])
+                    result = self.solve({}, state + 1)
+
+                    if result is not None:
+                        return result
+
+                    self.remove_edge(cell[0], cell[1], connection[0], connection[1])
+
+        
+
+        
+    def get_free_cells(self):
+        # obtener las celdas que tengan 0 y 1 conexiones
+        weight = []
+        free_cells = []
+        for row in self.adjacency_matrix:
+            for cell in row:
+                if cell.weight < 2:
+                    free_cells.append((cell.x, cell.y))
+                    weight.append(cell.weight)
+                    
+        #ordenar por peso (mayor a menor)
+        free_cells = [x for _, x in sorted(zip(weight, free_cells), key=lambda pair: pair[0], reverse=True)]
+                    
+        return free_cells
+    
+    def get_possible_connections(self, node_):
+        adj = [
+            (-1, 0),  # up
+            (0, -1),  # left
+            (0, 1),   # right
+            (1, 0),   # down
+        ]
+        
+        return self.get_coords_nodes(node_, adj)
                     
     def return_draw_lines(self):
+        self.remove_all_connected_nodes()
+        self.get_connected_nodes()
         draw_lines = []
         for node in self.connected_nodes:
             for adjacent in node.adjacency_list:
-                if not self.exist_in_drawn_lines((node.x, node.y), (adjacent.x, adjacent.y), draw_lines):
+                if not self.exist_in_drawn_lines((node.x + 1, node.y + 1), (adjacent.x + 1, adjacent.y + 1), draw_lines):
                     draw_lines.append((node.x + 1, node.y + 1))
                     draw_lines.append((adjacent.x + 1, adjacent.y + 1))          
         
         return draw_lines
 
     def exist_in_drawn_lines(self, cell1, cell2, drawn_lines):
-        for i in range(0, len(drawn_lines) - 1, 2):
-            if (cell1 == drawn_lines[i] and cell2 == drawn_lines[i + 1]) or (cell2 == drawn_lines[i] and cell1 == drawn_lines[i + 1]):
+        for i in range(0, len(drawn_lines) - 1, 2):  # iterate in steps of 2
+            if (cell1 == drawn_lines[i] and cell2 == drawn_lines[i + 1]) or (cell1 == drawn_lines[i + 1] and cell2 == drawn_lines[i]):
                 return True
         return False
-        
 
     def valido_imprimir(self):
         count = 0
@@ -677,6 +764,7 @@ class Graph:
         print("0, 4 -> 0, 3 ", self.exist_connection(0, 4, 0, 3))
         print("0, 3 -> 1, 3 ", self.exist_connection(0, 3, 1, 3))
         print("1, 3 -> 2, 3 ", self.exist_connection(1, 3, 2, 3))
+        print("1, 2 -> 1, 3 ", self.exist_connection(1, 2, 1, 3))
         
         if self.exist_connection(1, 0, 1, 1):
             count += 1
@@ -719,27 +807,29 @@ class Graph:
         if self.exist_connection(1, 3, 2, 3):
             count += 1
         
+        
         print(f"\nCANTIDAD DE VALIDACIONES: {count}")
         
         return count
                                 
     def validate_new_moves(self, moves):
+        uptaded_moves = {}
         for key in moves:      
-            new_moves = self.already_exists(moves, key)  
-            print(f"\n{key}")
-            if len(new_moves) > 0:
-                print(f"already exists: {new_moves}")
-                moves[key] = new_moves
-                continue   
+            print (f"\nKey: {key}")
+            already_exists = self.already_exists(moves, key)
             
-            new_moves = self.follow_route(moves, key)
-            print(f"follow: {new_moves}")
-            view_adjacents_nodes = self.see_adjacent_nodes(new_moves, key)
-            print(f"---------New moves: {view_adjacents_nodes}")
+            if len(already_exists) > 0:
+                print (f"\nAlready exists: {already_exists}")
+                uptaded_moves[key] = already_exists
+                continue
             
-            moves[key] = view_adjacents_nodes
+            follow_route = self.follow_route(moves, key)
+            print (f"\nFollow route: {follow_route}")
+            view_adjacents_nodes = self.see_adjacent_nodes(follow_route, key)
+            print (f"\nView adjacents nodes: {view_adjacents_nodes}")
+            uptaded_moves[key] = view_adjacents_nodes
         
-        return moves
+        return uptaded_moves
             
     def already_exists(self, moves, key):
         already_exists = []
@@ -761,7 +851,7 @@ class Graph:
         list_connections = []
 
         if len(connections) == 0:
-            return moves[key]
+            return moves[key].copy()
         
         for node in connections:
             list_connections.append((node.x, node.y))
@@ -772,10 +862,10 @@ class Graph:
         
         return new_moves
     
-    def get_coords_nodes(self, key, directions):
+    def get_coords_nodes(self, node_, directions):
         nodes = []
         for dx, dy in directions:
-            new_x, new_y = key[0] + dx, key[1] + dy
+            new_x, new_y = node_[0] + dx, node_[1] + dy
             if 0 <= new_x < self.size and 0 <= new_y < self.size:
                 nodes.append((new_x, new_y))
         return nodes
@@ -839,69 +929,3 @@ class Graph:
                                 pass
 
         return view_adjacents_nodes
-
-    # def get_possible_moves(self):
-    #     moves = []
-    #     rows = self.size
-    #     cols = self.size
-    #     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-    
-    #     for i in range(rows):
-    #         for j in range(cols):
-    #             if self.adjacency_matrix[i][j].weight == 1:
-    #                 for dx, dy in directions:
-    #                     new_x, new_y = i + dx, j + dy
-    #                     if 0 <= new_x < rows and 0 <= new_y < cols:
-    #                         moves.append((i, j, new_x, new_y))  
-    #     moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
-    #     return moves
-    
-    # def move_heuristic(self, move):
-    #     s_x, s_y, e_x, e_y = move
-    #     start_node = self.adjacency_matrix[s_x][s_y]
-    #     end_node = self.adjacency_matrix[e_x][e_y]
-    #     score = 0
-
-    #     if start_node.color is not None or end_node.color is not None:
-    #         score += 10
-    #     if start_node.weight == 1 or end_node.weight == 1:
-    #         score += 5
-    #     if self.check_valid_black(start_node) or self.check_valid_black(end_node):
-    #         score += 3
-    #     if self.check_valid_white(start_node) or self.check_valid_white(end_node):
-    #         score += 3
-            
-    #     print(s_x, s_y, e_x, e_y, score)
-    #     return score
-        
-    # def first_possible_moves_p(self, pearl):
-    #     moves = []
-    #     rows = self.size
-    #     cols = self.size
-    #     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # right, left, down, up
-    
-    #     i, j = pearl.x, pearl.y
-    #     if self.adjacency_matrix[i][j].weight == 0:
-    #         for dx, dy in directions:
-    #             new_x, new_y = i + dx, j + dy
-    #             if 0 <= new_x < rows and 0 <= new_y < cols:
-    #                 moves.append((i, j, new_x, new_y))
-    #     return moves
-    
-    # def first_random_move(self):
-    #     # Check if any AI moves have been done
-    #     if all(all(cell.weight == 0 for cell in row) for row in self.adjacency_matrix):
-    #         return True
-    #     else:
-    #         # If an AI move has been done, return None
-    #         return False
-        
-    # def get_first_random_move(self):
-    #     # Get the possible moves for this pearl
-    #     moves = self.first_possible_moves_p(self.pearls[0])
-    #     # If there are no possible moves, return None
-    #     if not moves:
-    #         return None
-    #     # Otherwise, return a random move
-    #     moves.sort(key=lambda move: self.move_heuristic(move), reverse=True)
-    #     return moves

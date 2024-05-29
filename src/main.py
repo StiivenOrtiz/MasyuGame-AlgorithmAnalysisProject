@@ -9,7 +9,7 @@ import Util.check_args as c_a
 
 def main():
     # Check command line arguments
-    filename, resolution = c_a.check_args(sys.argv)
+    filename, resolution, execute = c_a.check_args(sys.argv)
     
     # Initialize the game
     pygame.init()
@@ -27,6 +27,9 @@ def main():
 
     # Current state of the game
     current_state = "menu"
+    
+    if execute:
+        current_state = "ai_game"
 
     # Initialize the game objects
     if filename != "" or filename != None:
@@ -72,6 +75,7 @@ def main():
                 game = show_game.Game(SCREEN_WIDTH, SCREEN_HEIGHT, filename)
                 
         elif current_state == "game":
+            print("game")
             game.ai_game = False
             game.draw(screen, events)
         elif current_state == "ai_game":

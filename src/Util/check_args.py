@@ -9,6 +9,7 @@ def check_args(args: str) -> str:
     """
     resolution = -1
     filename = ""
+    execute = False
     
     # python .\src\main.py -r 1200 -f .\games\board_template.txt (the order of the arguments does not matter)
     
@@ -22,4 +23,7 @@ def check_args(args: str) -> str:
     if "-f" in args:
         filename = args[args.index("-f") + 1]
         
-    return filename, resolution
+    if "-e" in args:
+        execute = True
+        
+    return filename, resolution, execute

@@ -116,8 +116,15 @@ class Game:
             print(self.drawn_lines)
             print ("-----------------------------")
         else:
-            self.drawn_lines = self.game.graph.solve_mayus_game()
-            print("---------Drawn lines---------")
+            if self.state == "START":
+                self.drawn_lines.extend(self.game.graph.solve_mayus_game())
+                print("---------Drawn lines---------")
+                print(self.drawn_lines)
+                print ("-----------------------------")
+                self.state = "STOP"
+
+            
+            
             
             
             # self.draw_all_game(screen)
