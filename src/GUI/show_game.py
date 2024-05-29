@@ -116,42 +116,8 @@ class Game:
             print(self.drawn_lines)
             print ("-----------------------------")
         else:
-            
-            if self.state == "START":
-            
-                # play, x_n, y_n = self.game.graph.solve_mayus_game()
-                
-                #(first_black_pearl.x + 1, first_black_pearl.y + 1), black_return, (first_white_pearl.x + 1, first_white_pearl.y + 1), white_return
-                
-                black_cord, black_return, white_cord, white_return = self.game.graph.solve_mayus_game()
-                
-                print(f"Black: {black_cord} - {black_return}")
-                print(f"White: {white_cord} - {white_return}")
-                
-                new_play_black = self.get_black_draw_connection(black_cord, black_return)
-                new_play_white = self.get_white_draw_connection(white_cord, white_return)
-                
-                print(f"New play black: {new_play_black}")
-                print(f"New play white: {new_play_white}")
-                
-                for i in range(0, len(new_play_black), 2):
-                    self.make_ai_move(new_play_black[i][0], new_play_black[i][1], new_play_black[i + 1][0], new_play_black[i + 1][1])
-                
-                print(f"Drawn lines: {self.drawn_lines}")
-                    
-                n_new_play_white = self.game.graph.clean_list(new_play_white)
-                
-                print(f"New play white: {n_new_play_white}")
-                
-                for i in range(0, len(n_new_play_white), 2):
-                    self.make_ai_move(n_new_play_white[i][0], n_new_play_white[i][1], n_new_play_white[i + 1][0], n_new_play_white[i + 1][1])
-                
-                print(f"Drawn lines: {self.drawn_lines}")
-                
-                self.state = "PLAY"
-
-            
-            
+            self.drawn_lines = self.game.graph.solve_mayus_game()
+            print("---------Drawn lines---------")
             
             
             # self.draw_all_game(screen)

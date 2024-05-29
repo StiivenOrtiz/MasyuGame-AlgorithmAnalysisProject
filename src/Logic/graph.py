@@ -55,6 +55,7 @@ class Graph:
         self.size = len(self.adjacency_matrix)
         self.connected_nodes = []
         self.pearls = self.get_pearls()
+        self.melachupa = []
 
     def create_adjacency_matrix(self, file_name: str) -> list[list[Node]]:
         """Create an adjacency matrix from a file
@@ -119,29 +120,15 @@ class Graph:
         """
         start_node = self.adjacency_matrix[s_x][s_y]
         end_node = self.adjacency_matrix[e_x][e_y]
-        # print("adding")
-        # print(start_node, end_node)
+        
+        if end_node not in start_node.adjacency_list and start_node not in end_node.adjacency_list:
+            # add weight
+            end_node.weight += 1
+            start_node.weight += 1
 
-        # add weight
-        end_node.weight += 1
-        start_node.weight += 1
-
-        # add node in the start node adjacent list
-        start_node.add_adjacent_node(end_node)
-        end_node.add_adjacent_node(start_node)
-
-        # print()
-        # print("Start node...")
-        # print(f"Adjacent nodes of {start_node}:")
-        # for node in start_node.adjacency_list:
-        #     print(node, end= " ")
-        # print()
-
-        # print("End node...")
-        # print(f"Adjacent nodes of {end_node}:")
-        # for node in end_node.adjacency_list:
-        #     print(node, end=" ")
-        # print()
+            # add node in the start node adjacent list
+            start_node.add_adjacent_node(end_node)
+            end_node.add_adjacent_node(start_node)
 
     def remove_edge(self, s_x: int, s_y: int, e_x: int, e_y: int) -> None:
         """Remove an edge between two nodes
@@ -154,6 +141,9 @@ class Graph:
         """
         start_node = self.adjacency_matrix[s_x][s_y]
         end_node = self.adjacency_matrix[e_x][e_y]
+        
+        if end_node not in start_node.adjacency_list or start_node not in end_node.adjacency_list:
+            return
         # print("removing")
         # print(start_node, end_node)
         # decrease weight
@@ -496,6 +486,22 @@ class Graph:
                 return True
 
         return False
+    
+    def exist_connection(self, s_x: int, s_y: int, e_x: int, e_y: int) -> bool:
+        """Check if an edge exists between two nodes
+
+        Args:
+            s_x (int): start node x position
+            s_y (int): start node y position
+            e_x (int): end node x position
+            e_y (int): end node y position
+
+        Returns:
+            bool: True if the edge exists, False otherwise
+        """
+        start_node = self.adjacency_matrix[s_x][s_y]
+        end_node = self.adjacency_matrix[e_x][e_y]
+        return end_node in start_node.adjacency_list or start_node in end_node.adjacency_list
 
     def print_connected_nodes(self):
         print("----SEE CONNECTED NODES----")
@@ -505,6 +511,12 @@ class Graph:
                 print(adjacent, end=" ")
             print()
         print()
+        
+        #Imprimir el tablero con las jugadas
+        for x in range(self.size):
+            for y in range(self.size):
+                print(f"{self.adjacency_matrix[x][y].weight} ", end="\t")
+            print()
 
     def print_graph(self):
         print("----SEE GRAPH----")
@@ -608,52 +620,225 @@ class Graph:
     def solve_mayus_game(self):
         black_pearls, white_pearls = self.get_classify_pearls()
         
-        print("\n")
+        #diccionario de movimientos
+        moves = {}
         
-        for black_pearl in black_pearls:
-            print(self.get_possible_black_pearl_moves(black_pearl))
+        for pearl in black_pearls:
+            moves[(pearl.x, pearl.y)] = self.get_possible_black_pearl_moves(pearl)
         
-        for white_pearl in white_pearls:
-            print(self.get_possible_white_pearl_moves(white_pearl))
+        for pearl in white_pearls:
+            moves[(pearl.x, pearl.y)] = self.get_possible_white_pearl_moves(pearl)
             
-        print("\n")
-        
-        first_black_pearl = black_pearls[0]
-        first_white_pearl = white_pearls[0]
-        
-        black_moves = self.get_possible_black_pearl_moves(first_black_pearl)
-        white_moves = self.get_possible_white_pearl_moves(first_white_pearl)
-        
-        first_black_moves = black_moves[0]
-        first_white_moves = white_moves[0]
-        
-        white_return = []
-        for i in range(len(first_white_moves)):
-            white_return.append((first_white_moves[i][0] + 1, first_white_moves[i][1] + 1))
+        self.solve(moves, 1)
             
-        black_return = []
-        for i in range(len(first_black_moves)):
-            black_return.append((first_black_moves[i][0] + 1, first_black_moves[i][1] + 1))
+        return self.melachupa
         
-        return (first_black_pearl.x + 1, first_black_pearl.y + 1), black_return, (first_white_pearl.x + 1, first_white_pearl.y + 1), white_return
-        
-        
-        # first_black_pearl = white_pearls[0]
-        # print(self.get_possible_black_pearl_moves(first_black_pearl))
-        
-        # for i in range(len(black_pearls)):
-        #     print("Pearl [",i,"]: ", black_pearls[i].x, black_pearls[i].y)
             
-        
-        # # Sumar 1 a todas las posiciones
-        # # lista_retorno = self.get_possible_black_pearl_moves(first_black_pearl)[0]
-        # lista_retorno = self.get_possible_white_pearl_moves(first_black_pearl)[0]
-        # for i in range(len(lista_retorno)):
-        #     lista_retorno[i] = (lista_retorno[i][0] + 1, lista_retorno[i][1] + 1)
-        
-        # return lista_retorno, first_black_pearl.x + 1, first_black_pearl.y + 1
+    # def solve(self, moves, gameeee):
 
+                    
+    def return_draw_lines(self):
+        draw_lines = []
+        for node in self.connected_nodes:
+            for adjacent in node.adjacency_list:
+                if not self.exist_in_drawn_lines((node.x, node.y), (adjacent.x, adjacent.y), draw_lines):
+                    draw_lines.append((node.x + 1, node.y + 1))
+                    draw_lines.append((adjacent.x + 1, adjacent.y + 1))          
         
+        return draw_lines
+
+    def exist_in_drawn_lines(self, cell1, cell2, drawn_lines):
+        for i in range(0, len(drawn_lines) - 1, 2):
+            if (cell1 == drawn_lines[i] and cell2 == drawn_lines[i + 1]) or (cell2 == drawn_lines[i] and cell1 == drawn_lines[i + 1]):
+                return True
+        return False
+        
+
+    def valido_imprimir(self):
+        count = 0
+        
+        print("\n1, 0 -> 1, 1 ", self.exist_connection(1, 0, 1, 1))
+        print("1, 1 -> 1, 2 ", self.exist_connection(1, 0, 1, 1))
+        print("1, 0 -> 2, 0 ", self.exist_connection(1, 0, 2, 0))
+        print("2, 0 -> 3, 0 ", self.exist_connection(2, 0, 3, 0))
+        print("3, 0 -> 4, 0 ", self.exist_connection(3, 0, 4, 0))
+        print("4, 0 -> 5, 0 ", self.exist_connection(4, 0, 5, 0))
+        print("5, 0 -> 5, 1 ", self.exist_connection(5, 0, 5, 1))
+        print("2, 1 -> 3, 1 ", self.exist_connection(2, 1, 3, 1))
+        print("3, 1 -> 4, 1 ", self.exist_connection(3, 1, 4, 1))
+        print("4, 1 -> 4, 2 ", self.exist_connection(4, 1, 4, 2))
+        print("4, 2 -> 4, 3 ", self.exist_connection(4, 2, 4, 3))
+        print("4, 3 -> 4, 4 ", self.exist_connection(4, 3, 4, 4))
+        print("4, 4 -> 3, 4 ", self.exist_connection(4, 4, 3, 4))
+        print("3, 4 -> 2, 4 ", self.exist_connection(3, 4, 2, 4))
+        print("2, 5 -> 1, 5 ", self.exist_connection(2, 5, 1, 5))
+        print("1, 5 -> 0, 5 ", self.exist_connection(1, 5, 0, 5))
+        print("0, 5 -> 0, 4 ", self.exist_connection(0, 5, 0, 4))
+        print("0, 4 -> 0, 3 ", self.exist_connection(0, 4, 0, 3))
+        print("0, 3 -> 1, 3 ", self.exist_connection(0, 3, 1, 3))
+        print("1, 3 -> 2, 3 ", self.exist_connection(1, 3, 2, 3))
+        
+        if self.exist_connection(1, 0, 1, 1):
+            count += 1
+        if self.exist_connection(1, 1, 1, 2):
+            count += 1
+        if self.exist_connection(1, 0, 2, 0):
+            count += 1
+        if self.exist_connection(2, 0, 3, 0):
+            count += 1
+        if self.exist_connection(3, 0, 4, 0):
+            count += 1
+        if self.exist_connection(4, 0, 5, 0):
+            count += 1
+        if self.exist_connection(5, 0, 5, 1):
+            count += 1
+        if self.exist_connection(2, 1, 3, 1):
+            count += 1
+        if self.exist_connection(3, 1, 4, 1):
+            count += 1
+        if self.exist_connection(4, 1, 4, 2):
+            count += 1
+        if self.exist_connection(4, 2, 4, 3):
+            count += 1
+        if self.exist_connection(4, 3, 4, 4):
+            count += 1
+        if self.exist_connection(4, 4, 3, 4):
+            count += 1
+        if self.exist_connection(3, 4, 2, 4):
+            count += 1
+        if self.exist_connection(2, 5, 1, 5):
+            count += 1
+        if self.exist_connection(1, 5, 0, 5):
+            count += 1
+        if self.exist_connection(0, 5, 0, 4):
+            count += 1
+        if self.exist_connection(0, 4, 0, 3):
+            count += 1
+        if self.exist_connection(0, 3, 1, 3):
+            count += 1
+        if self.exist_connection(1, 3, 2, 3):
+            count += 1
+        
+        print(f"\nCANTIDAD DE VALIDACIONES: {count}")
+        
+        return count
+                                
+    def validate_new_moves(self, moves):
+        for key in moves:      
+            new_moves = self.already_exists(moves, key)  
+            print(f"\n{key}")
+            if len(new_moves) > 0:
+                print(f"already exists: {new_moves}")
+                moves[key] = new_moves
+                continue   
+            
+            new_moves = self.follow_route(moves, key)
+            print(f"follow: {new_moves}")
+            view_adjacents_nodes = self.see_adjacent_nodes(new_moves, key)
+            print(f"---------New moves: {view_adjacents_nodes}")
+            
+            moves[key] = view_adjacents_nodes
+        
+        return moves
+            
+    def already_exists(self, moves, key):
+        already_exists = []
+        
+        for move in moves[key]:
+            if self.adjacency_matrix[key[0]][key[1]].color == 1:
+                list_moves = [move[0], key, move[1], move[2]]
+            elif self.adjacency_matrix[key[0]][key[1]].color == 2:
+                list_moves = [move[0], move[1], key, move[2], move[3]]
+            
+            if all(self.exist_connection(list_moves[i][0], list_moves[i][1], list_moves[i + 1][0], list_moves[i + 1][1]) for i in range(len(list_moves) - 1)):
+                already_exists.append(move)
+                
+        return already_exists
+    
+    def follow_route(self, moves, key):
+        new_moves = []
+        connections = self.adjacency_matrix[key[0]][key[1]].adjacency_list
+        list_connections = []
+
+        if len(connections) == 0:
+            return moves[key]
+        
+        for node in connections:
+            list_connections.append((node.x, node.y))
+            
+        for sublist in moves[key]:
+            if all(elem in sublist for elem in list_connections):
+                new_moves.append(sublist)
+        
+        return new_moves
+    
+    def get_coords_nodes(self, key, directions):
+        nodes = []
+        for dx, dy in directions:
+            new_x, new_y = key[0] + dx, key[1] + dy
+            if 0 <= new_x < self.size and 0 <= new_y < self.size:
+                nodes.append((new_x, new_y))
+        return nodes
+    
+    def valid_possible_moves_by_connections(self, list_moves, node_adj, connections):
+        new_list_moves = []
+        for play in list_moves:
+            if play not in connections and play != node_adj:
+                new_list_moves.append(play)
+        return new_list_moves
+    
+    def see_adjacent_nodes(self, moves, key):
+        view_adjacents_nodes = moves.copy()
+        color = self.adjacency_matrix[key[0]][key[1]].color
+        adj = [
+            (-1, 0),  # up
+            (0, -1),  # left
+            (0, 1),   # right
+            (1, 0),   # down
+        ]
+
+        diagonals = [
+            (-1, -1),  # Diagonal up left
+            (-1, 1),   # Diagonal up right
+            (1, -1),   # Diagonal down left
+            (1, 1)     # Diagonal down right
+        ]
+
+        nodes_adj = self.get_coords_nodes(key, adj)
+
+        if color == 1:
+            nodes_adj.extend(self.get_coords_nodes(key, diagonals))
+
+        for move in moves:
+            move_copy = move.copy()
+            for node_adj in nodes_adj:
+                if node_adj in move_copy:
+                    weight = self.adjacency_matrix[node_adj[0]][node_adj[1]].weight
+                    if weight > 0:
+                        connections_ = self.adjacency_matrix[node_adj[0]][node_adj[1]].adjacency_list
+                        connections = [(node.x, node.y) for node in connections_]
+
+                        list_moves = []
+
+                        if color == 1:
+                            list_moves = [move_copy[0], key, move_copy[1], move_copy[2]]
+                        elif color == 2:
+                            list_moves = [move_copy[0], move_copy[1], key, move_copy[2], move_copy[3]]
+
+                        list_moves = self.valid_possible_moves_by_connections(list_moves, node_adj, connections)
+                        adj_ = self.get_coords_nodes(node_adj, adj)
+
+                        count = sum(1 for di in adj_ if di in list_moves)
+
+                        count += weight
+
+                        if count > 2:
+                            try:
+                                view_adjacents_nodes.remove(move)
+                            except:
+                                pass
+
+        return view_adjacents_nodes
 
     # def get_possible_moves(self):
     #     moves = []
