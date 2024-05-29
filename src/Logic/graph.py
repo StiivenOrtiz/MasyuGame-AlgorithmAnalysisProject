@@ -684,29 +684,29 @@ class Graph:
             
             possible_connections = []
             
-            if last_move is not None:
-                if self.adjacency_matrix[last_move[0]][last_move[1]].weight == 1:
-                    print("No more moves")
-                    possible_connections = self.get_possible_connections(last_move)
-                    if possible_connections is None:
-                        print("No more free cells")
-                        return None
-                    else:
-                        for i in range(len(possible_connections)):
-                            print(f"\nMake play: {last_move} -> {possible_connections[i]}")
-                            self.add_edge(last_move[0], last_move[1], possible_connections[i][0], possible_connections[i][1])
-                            
-                            if self.check_win():
-                                return self.return_draw_lines()
-                            
-                            result = self.solve(moves, state + 1, (possible_connections[i][0], possible_connections[i][1]))
-                            
-                            if result is not None:
-                                return result
-                            
-                            self.remove_edge(last_move[0], last_move[1], possible_connections[i][0], possible_connections[i][1])
-                            
-                        return None
+            if last_move is not None and self.adjacency_matrix[last_move[0]][last_move[1]].weight == 1:
+                print("No more moves")
+                possible_connections = self.get_possible_connections(last_move)
+                
+                if possible_connections is None:
+                    print("No more free cells")
+                    return None
+                else:
+                    for i in range(len(possible_connections)):
+                        print(f"\nMake play: {last_move} -> {possible_connections[i]}")
+                        self.add_edge(last_move[0], last_move[1], possible_connections[i][0], possible_connections[i][1])
+                        
+                        if self.check_win():
+                            return self.return_draw_lines()
+                        
+                        result = self.solve(moves, state + 1, (possible_connections[i][0], possible_connections[i][1]))
+                        
+                        if result is not None:
+                            return result
+                        
+                        self.remove_edge(last_move[0], last_move[1], possible_connections[i][0], possible_connections[i][1])
+                        
+                    return None
             
             free_cells = self.get_free_cells()
 
